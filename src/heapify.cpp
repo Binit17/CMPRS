@@ -110,3 +110,12 @@ int main()
     huff.display_heaped();
     return 0;
 }
+//here frequency_counter's parameter can be string from a text file 
+/*then frequency counter calls create_final_list, 
+create_final_list ->(creates or manages) std::vector list is the list that stores only present symbols and 
+their frequency.
+then create_final_list calls heapify
+heapify() finds youngest parent(at first then works for previous parents after subsequent return)
+for a parent heapify() calls min_heapify that parent's family
+min_heapify() does parent swap if child min thing and after swap calls itself with position of child(in which parent is swapped)
+*/
