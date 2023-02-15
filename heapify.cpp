@@ -17,8 +17,9 @@ class Symbol_manager
     private:
         std::vector<symbol_id> list;
         std::array<symbol_id, 255> initial_list;
+        std::size_t list_SIZE;
     public:
-        Symbol_manager(): list(255){}
+        Symbol_manager(): list(255){list_SIZE = list.size();}
         void frequency_counter(std::string_view input_string)
         {
             for(auto i: input_string)
@@ -38,13 +39,13 @@ class Symbol_manager
             }
             list.resize(j);
             list.shrink_to_fit();
-            std::cout << "HELLLO"<<std::endl;
+            list_SIZE = list.size();
             heapify(0);
         }
        
         void heapify(size_t index)
         {
-            if(index * 2 + 1 >= list.size())
+            if(index * 2 + 1 >= list_SIZE)
             {
                 return;
             }
@@ -56,7 +57,7 @@ class Symbol_manager
             size_t left_index = 2*index +1;
             size_t right_index{};
 
-            if(left_index >= list.size())
+            if(left_index >= list_SIZE)
             {
                 return;
             }
@@ -69,7 +70,7 @@ class Symbol_manager
 
 
             //to cover the condition when there is no right child
-            if(left_index+1 >= list.size())
+            if(left_index+1 >= list_SIZE)
             {
                 minimum_child_index = left_index;
                 minimum_child_value = left_value;
@@ -100,6 +101,24 @@ class Symbol_manager
                 std::cout << i.frequency <<'\t';
             }
         }
+        void deletion_min()
+        {
+            size_t index = 0;
+            symbol_id temp = list.at(index);
+            list.at(index) = list.at(list_SIZE-1);//list_SIZE-1 because 2 elements means 0 1 index but list_SIZE=2
+            list.at(list_SIZE-1) = temp;
+            list_SIZE--;
+            min_heapify(index);
+        }
+        void reverse_sort()
+        {
+            if(list_SIZE ==1)
+            {
+                return;
+            }
+            deletion_min();
+            reverse_sort();
+        }
 };
 int main()
 {
@@ -107,5 +126,16 @@ int main()
     Symbol_manager huff;
     huff.frequency_counter(test);
     huff.display_heaped();
+    huff.reverse_sort();
+    huff.display_heaped();
     return 0;
 }
+//here frequency_counter's parameter can be string from a text file 
+/*then frequency counter calls create_final_list, 
+create_final_list ->(creates or manages) std::vector list is the list that stores only present symbols and 
+their frequency.
+then create_final_list calls heapify
+heapify() finds youngest parent(at first then works for previous parents after subsequent return)
+for a parent heapify() calls min_heapify that parent's family
+min_heapify() does parent swap if child min thing and after swap calls itself with position of child(in which parent is swapped)
+*/
