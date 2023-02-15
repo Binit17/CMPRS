@@ -17,6 +17,7 @@ class Symbol_manager
     private:
         std::vector<symbol_id> list;
         std::array<symbol_id, 255> initial_list;
+        std::size_t list_SIZE;//when item is deleted from heap, this size = no. of elements in the heap
     public:
         Symbol_manager(): list(255){}
         void frequency_counter(std::string_view input_string)
@@ -38,13 +39,13 @@ class Symbol_manager
             }
             list.resize(j);
             list.shrink_to_fit();
-            std::cout << "HELLLO"<<std::endl;
+            list_SIZE = list.size();
             heapify(0);
         }
        
         void heapify(size_t index)
         {
-            if(index * 2 + 1 >= list.size())
+            if(index * 2 + 1 >= list_SIZE)
             {
                 return;
             }
@@ -56,7 +57,7 @@ class Symbol_manager
             size_t left_index = 2*index +1;
             size_t right_index{};
 
-            if(left_index >= list.size())
+            if(left_index >= list_SIZE)
             {
                 return;
             }
@@ -69,7 +70,7 @@ class Symbol_manager
 
 
             //to cover the condition when there is no right child
-            if(left_index+1 >= list.size())
+            if(left_index+1 >= list_SIZE)
             {
                 minimum_child_index = left_index;
                 minimum_child_value = left_value;
