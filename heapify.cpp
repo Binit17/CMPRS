@@ -9,7 +9,12 @@ const int MODULO = 255;
 struct symbol_id
 {
     std::size_t frequency=0;
-    char sym;
+    // char sym;/here after removing 2 least frequent stuff and returning there summed part (we also concatenate the symbols so 
+    //use of string instead of char)
+    std::string sym;
+    std::string bit_encoding;
+    symbol_id* left=nullptr;
+    symbol_id* right=nullptr;
 };
 
 class Symbol_manager
@@ -18,8 +23,10 @@ class Symbol_manager
         std::vector<symbol_id> list;
         std::array<symbol_id, 255> initial_list;
         std::size_t list_SIZE;
+        symbol_id node;
     public:
         Symbol_manager(): list(255){list_SIZE = list.size();}
+
         void frequency_counter(std::string_view input_string)
         {
             for(auto i: input_string)
@@ -110,6 +117,76 @@ class Symbol_manager
             list_SIZE--;
             min_heapify(index);
         }
+        
+        /*HERE when i assign variable of type symbol_id to vector right of type 
+          symbol_id* was assigned to itself*/
+        // void insert_in_heap(symbol_id element, size_t index)
+        // {
+        //     list.at(index)= element;//here assign it at the create_huffman function
+        //     if(index == 0)
+        //     {
+        //         return;
+        //     }
+        //     assert(index !=0 &&"index is less than or equal to zero");
+        //     size_t parent_index = floor((index-1)/2);
+        //     if(list.at(index).frequency < list.at(parent_index).frequency)
+        //     {
+        //         swap(index, parent_index);
+        //         insert_in_heap(element, parent_index);
+        //     }
+        // }
+
+        //THIS insert assumes that you have already inserted element at index, right now lazy to fix
+        void insert_in_heap( size_t index)
+        {
+            //here assign it at the create_huffman function
+            if(index == 0)
+            {
+                return;
+            }
+            assert(index !=0 &&"index is less than or equal to zero");
+            size_t parent_index = floor((index-1)/2);
+            if(list.at(index).frequency < list.at(parent_index).frequency)
+            {
+                swap(index, parent_index);
+                insert_in_heap(parent_index);
+            }
+        }
+        void create_huffman_tree()
+        {
+            if(list_SIZE <= 1)
+            {
+                return;
+            }
+            //parent node
+            //set left
+            deletion_min();
+            //here manage the storage duration of left , as function returns this will result in UB
+            symbol_id* left = new symbol_id;
+            *left = list.at(list_SIZE);
+            node.left = left;//for 0 indexed system we dont need to list_SIZE+1
+            node.sym = list.at(list_SIZE).sym;
+            node.frequency = list.at(list_SIZE).frequency;
+            //set right
+            deletion_min();
+            symbol_id* right = new symbol_id;
+            *right = list.at(list_SIZE);
+            node.right = right;
+            node.sym = node.sym + list.at(list_SIZE).sym;
+            node.frequency += list.at(list_SIZE).frequency;
+            //give back to list
+            
+            list.at(list_SIZE) = node;    
+            insert_in_heap(list_SIZE);
+            list_SIZE++;
+            create_huffman_tree();
+        }
+        void swap(size_t index1, size_t index2)
+        {
+            symbol_id temp = list.at(index1);
+            list.at(index1) = list.at(index2);
+            list.at(index2)= temp;
+        }
         void reverse_sort()
         {
             if(list_SIZE ==1)
@@ -120,14 +197,18 @@ class Symbol_manager
             reverse_sort();
         }
 };
+
+
+
 int main()
 {
-    std::string test = "https://chat.openai.com/chat/b71743f4-aae0-4908-b52b-79e916f162e4";
+    std::string test = "ab";
     Symbol_manager huff;
     huff.frequency_counter(test);
     huff.display_heaped();
-    huff.reverse_sort();
-    huff.display_heaped();
+    // huff.reverse_sort();
+    // huff.display_heaped();
+    huff.create_huffman_tree();
     return 0;
 }
 //here frequency_counter's parameter can be string from a text file 
