@@ -181,6 +181,26 @@ class Symbol_manager
             list_SIZE++;
             create_huffman_tree();
         }
+        void assign_encoding(symbol_id* node, std::string encoding)
+        {
+            if(node->left)
+            {
+                assign_encoding(node->left, encoding+'0');
+            }
+            if(node->right)
+            {
+                assign_encoding(node->right, encoding+'1');
+            }
+            if(!node->left && !node->right)
+            {
+                node->bit_encoding = encoding;
+                std::cout << "\n"<<node->sym << "==" << node->bit_encoding;
+            }
+        }
+        void call_encoder()
+        {
+            assign_encoding(&list.at(0),"");
+        }
         void swap(size_t index1, size_t index2)
         {
             symbol_id temp = list.at(index1);
@@ -196,19 +216,21 @@ class Symbol_manager
             deletion_min();
             reverse_sort();
         }
+
 };
 
 
 
 int main()
 {
-    std::string test = "ab";
+    std::string test = "abiral";
     Symbol_manager huff;
     huff.frequency_counter(test);
     huff.display_heaped();
     // huff.reverse_sort();
     // huff.display_heaped();
     huff.create_huffman_tree();
+    huff.call_encoder();
     return 0;
 }
 //here frequency_counter's parameter can be string from a text file 
