@@ -4,7 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <cassert>
-
+#include <fstream>
 const int MODULO = 255;
 struct symbol_id
 {
@@ -194,6 +194,7 @@ class Symbol_manager
             if(!node->left && !node->right)
             {
                 node->bit_encoding = encoding;
+                initial_list.at(static_cast<int>(node->sym[0])).bit_encoding = encoding;
                 std::cout << "\n"<<node->sym << "==" << node->bit_encoding;
             }
         }
@@ -216,14 +217,72 @@ class Symbol_manager
             deletion_min();
             reverse_sort();
         }
+        void create_compressed(std::string_view input_text)
+        {
+            std::string encoded_string{};
+            for(auto c: input_text)
+            {
+                encoded_string += initial_list.at(static_cast<int>(c)).bit_encoding;
+            }
+            std::cout<<"\n"<<encoded_string;
+            save_encoded_string(encoded_string);
+        }
 
+        void save_encoded_string(std::string_view encoded_string)
+        {
+            std::string encoding_string_to_bits{};
+            // encoding_string_to_bits.reserve(encoded_string.size());
+            uint8_t temp=0;
+            int i;
+            for( i=0; i<encoded_string.size(); i++)
+            {
+                if(encoded_string[i] == '1')    temp |=1;
+                else{ temp |=0;}
+                temp <<=1;
+                //if 1 set 1 and if 0 set 0 and shit 1
+                if(i % 8 == 0)
+                {
+                    // encoding_string_to_bits[static_cast<int>(i/8)] = temp;
+                    encoding_string_to_bits += temp;    
+                }
+            }
+            if(encoded_string.size() % 8 !=0 && i!=0)
+            {
+               temp <<=(8-(encoded_string.size()%8));
+            //    encoding_string_to_bits.at(static_cast<int>(encoded_string.size()/8)) = temp;
+               encoding_string_to_bits += temp;
+            }
+//             std::ofstream outfile("my_file.txt");
+// outfile << my_string;
+
+            std::ofstream output_file("compressss.txt");
+            if(output_file.is_open())
+            {
+                output_file.write(encoding_string_to_bits.c_str(),encoding_string_to_bits.size());
+                output_file.close();
+            }
+        }
 };
 
 
 
 int main()
 {
-    std::string test = "abiral";
+    std::ifstream input_file{"input.txt"};
+    if(!input_file)
+    {
+        std::cout << "\n no file found";
+        return -1;
+    }
+    //take input from a test file
+    input_file.seekg(0, std::ios::end);
+    int length_of_file = input_file.tellg();
+    char *buffer = new char[length_of_file];
+    input_file.seekg(0, std::ios::beg);
+    input_file.read(buffer, length_of_file);
+
+    std::string test = static_cast<std::string>(buffer);
+    input_file.close();
     Symbol_manager huff;
     huff.frequency_counter(test);
     huff.display_heaped();
@@ -231,6 +290,7 @@ int main()
     // huff.display_heaped();
     huff.create_huffman_tree();
     huff.call_encoder();
+    huff.create_compressed(test);
     return 0;
 }
 //here frequency_counter's parameter can be string from a text file 
