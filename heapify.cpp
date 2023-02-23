@@ -5,12 +5,11 @@
 #include <cmath>
 #include <cassert>
 #include <fstream>
-const int MODULO = 255;
+#include <cstdint>
+const int MODULO = 256;
 struct symbol_id
 {
     std::size_t frequency=0;
-    // char sym;/here after removing 2 least frequent stuff and returning there summed part (we also concatenate the symbols so 
-    //use of string instead of char)
     std::string sym;
     std::string bit_encoding;
     symbol_id* left=nullptr;
@@ -21,12 +20,12 @@ class Symbol_manager
 {
     private:
         std::vector<symbol_id> list;
-        std::array<symbol_id, 255> initial_list;
+        std::array<symbol_id, 256> initial_list;
         std::size_t list_SIZE;
         symbol_id node;
     public:
-        Symbol_manager(): list(255){list_SIZE = list.size();}
-
+        Symbol_manager(): list(256){list_SIZE = list.size();}
+        
         void frequency_counter(std::string_view input_string)
         {
             for(auto i: input_string)
@@ -117,24 +116,6 @@ class Symbol_manager
             list_SIZE--;
             min_heapify(index);
         }
-        
-        /*HERE when i assign variable of type symbol_id to vector right of type 
-          symbol_id* was assigned to itself*/
-        // void insert_in_heap(symbol_id element, size_t index)
-        // {
-        //     list.at(index)= element;//here assign it at the create_huffman function
-        //     if(index == 0)
-        //     {
-        //         return;
-        //     }
-        //     assert(index !=0 &&"index is less than or equal to zero");
-        //     size_t parent_index = floor((index-1)/2);
-        //     if(list.at(index).frequency < list.at(parent_index).frequency)
-        //     {
-        //         swap(index, parent_index);
-        //         insert_in_heap(element, parent_index);
-        //     }
-        // }
 
         //THIS insert assumes that you have already inserted element at index, right now lazy to fix
         void insert_in_heap( size_t index)
@@ -217,6 +198,8 @@ class Symbol_manager
             deletion_min();
             reverse_sort();
         }
+       
+       //Read file serially and change to proper encoding
         void create_compressed(std::string_view input_text)
         {
             std::string encoded_string{};
@@ -228,10 +211,8 @@ class Symbol_manager
             save_encoded_string(encoded_string);
         }
 
-        void save_encoded_string(std::string_view encoded_string)
+        void convert_and_store_in_bits(std::string_view encoded_string, std::string& encoding_string_to_bits)
         {
-            std::string encoding_string_to_bits{};
-            // encoding_string_to_bits.reserve(encoded_string.size());
             uint8_t temp=0;
             int i;
             for( i=0; i<encoded_string.size(); i++)
@@ -239,22 +220,64 @@ class Symbol_manager
                 if(encoded_string[i] == '1')    temp |=1;
                 else{ temp |=0;}
                 temp <<=1;
-                //if 1 set 1 and if 0 set 0 and shit 1
-                if(i % 8 == 0)
+                if((i+1) % 8 == 0 && i!=0)
                 {
-                    // encoding_string_to_bits[static_cast<int>(i/8)] = temp;
                     encoding_string_to_bits += temp;    
                 }
             }
             if(encoded_string.size() % 8 !=0 && i!=0)
             {
-               temp <<=(8-(encoded_string.size()%8));
-            //    encoding_string_to_bits.at(static_cast<int>(encoded_string.size()/8)) = temp;
+                //7- ans because for a single bit one shift would have already been done at top
+               temp <<=(7-(encoded_string.size()%8));
                encoding_string_to_bits += temp;
             }
-//             std::ofstream outfile("my_file.txt");
-// outfile << my_string;
+        }
+        //changes encoding char to acutal bits
+        void save_encoded_string(std::string_view encoded_string)
+        {
+            std::string encoding_string_to_bits{};
+            size_t length_of_bits = encoded_string.size();
+            //HEADER 1st PART total number of bits occupies 8bytes
+            encoding_string_to_bits.assign(reinterpret_cast<char*>(&length_of_bits), sizeof(length_of_bits));
+            // uint16_t number_of_uniquie_symbols = list.size();//is there something wrong with assignment of size_t to uint16_t?
+           
+            assert(list.size() != 0 && "list size if zero");
+           //HEADER 2nd BYTE = NUMBER OF UNQUIE SYMBOLS
+           //here 1 to 256 to store it -1 is subtracted
+            uint8_t number_of_uniquie_symbols = list.size()-1;
+            encoding_string_to_bits += number_of_uniquie_symbols;
+            //HEADER part 3
+            /*
+            1ST PART SYMBOL -> 1 BYTE
+            2ND PART LENGTH OF BITS IN ENCODING OF SYMBOL -> ? BYTE 
+            3RD PART ENCODING = LENGTH OF BITS + (8- LENGTH % 8) ;+ ON PART THAT LENGTH %8 != 0
+            */
+           //this for loop gets unique characters we have in our input
+           for(auto i: list.at(0).sym)
+           {
+                encoding_string_to_bits += i;
+                encoding_string_to_bits += static_cast<uint8_t>((initial_list.at(static_cast<uint>(i)).bit_encoding.length()));
+                convert_and_store_in_bits(initial_list.at(static_cast<uint>(i)).bit_encoding, encoding_string_to_bits);
+           }
 
+            // uint8_t temp=0;
+            // int i;
+            // for( i=0; i<encoded_string.size(); i++)
+            // {
+            //     if(encoded_string[i] == '1')    temp |=1;
+            //     else{ temp |=0;}
+            //     temp <<=1;
+            //     if(i % 8 == 0)
+            //     {
+            //         encoding_string_to_bits += temp;    
+            //     }
+            // }
+            // if(encoded_string.size() % 8 !=0 && i!=0)
+            // {
+            //    temp <<=(8-(encoded_string.size()%8));
+            //    encoding_string_to_bits += temp;
+            // }
+            convert_and_store_in_bits(encoded_string, encoding_string_to_bits);
             std::ofstream output_file("compressss.txt");
             if(output_file.is_open())
             {
@@ -262,10 +285,30 @@ class Symbol_manager
                 output_file.close();
             }
         }
+
 };
 
-
-
+class Decompress
+{
+    private:
+            std::string compressed_string;
+    public:
+    void decompress()
+        {
+            std::ifstream input_file{"compressss.txt"};
+            if(input_file.is_open()){
+                input_file.seekg(0, std::ios::end);
+                int length_of_file = input_file.tellg();
+                char *buffer = new char[length_of_file];//replace with std::string
+                input_file.seekg(0, std::ios::beg);
+                input_file.read(buffer, length_of_file);
+                compressed_string = buffer;
+                input_file.close();
+                // delete[] buffer;
+            }
+        }
+        
+};
 int main()
 {
     std::ifstream input_file{"input.txt"};
