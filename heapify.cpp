@@ -368,24 +368,41 @@ class Decompress
     }
     
 
-    // void create_tree()
-    // {
-    //     root_node = new Tree_Node;
-    //     for(auto i : map_of_symbols)
-    //     {
-    //         insert_node(root_node, i);
-        
-    //         std::string s;
-    //         s.r
-            
-    //     }
-    // }
-    void insert_node(Tree_Node* node)
+    void create_tree()
     {
-
+        root_node = new Tree_Node;
+        for(auto i : map_of_symbols)
+        {
+            insert_node(root_node, i.encoding_bits,0, i.symbol);
+        }
+    }
+    void insert_node(Tree_Node* node, std::string_view path, size_t index, char sym)
+    {
+        if(index == path.size())
+        {
+            node->symbol = sym;
+            return;
+        }
+        if(path.at(index) == '0')
+        {
+            if(node->left == nullptr) node->left = new Tree_Node;
+            insert_node(node->left, path, index + 1, sym);
+        }
+        else
+        {
+            if(node->right == nullptr) node->right = new Tree_Node;
+            insert_node(node->right, path, index + 1, sym);
+        }
     }
     
-    
+    // void decode(size_t traverse_index)
+    // {
+    //     if(traverse_index == compressed_string.size())
+    //     {
+    //         return;
+    //     }
+        
+    // }
     
     void display()
     {
@@ -425,6 +442,7 @@ int main()
     Decompress decom;
     decom.read_compressed_file();
     decom.decode_file_structure();
+    decom.create_tree();
     decom.display();
     return 0;
 }
