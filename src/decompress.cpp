@@ -51,7 +51,7 @@ class Decompress
         size_t traverse_index=0;
         number_of_bits = *reinterpret_cast<size_t*>(file_content.substr(0,sizeof(size_t)).data());
         traverse_index = sizeof(size_t);
-        number_of_unique_symbols = file_content.at(traverse_index++);
+        number_of_unique_symbols = static_cast<uint8_t>(file_content.at(traverse_index++));
 
         //Read symbol and their encoding
     
@@ -155,9 +155,9 @@ class Decompress
         }
     }
     
-    void save_unzipped_file()
+    void save_unzipped_file(std::string file_name)
     {
-        std::ofstream output_file("input.txt");
+        std::ofstream output_file(file_name);
         if(output_file.is_open())
         {
             output_file.write(decoded_string.c_str(),decoded_string.size());
@@ -186,7 +186,7 @@ int main(int argc , char* argv[])
     decom.read_compressed_file(file_name);
     decom.decode_file_structure();
     decom.create_tree();
-    decom.save_unzipped_file();
+    decom.save_unzipped_file(file_name);
     // decom.display();
     return 0;
 }
