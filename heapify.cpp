@@ -295,6 +295,7 @@ class Decompress
         uint8_t number_of_unique_symbols;
         std::string compressed_string;
         std::vector<encoding_scheme> map_of_symbols;
+        std::string decoded_string;
     public:
     Decompress(): map_of_symbols(256){}
     void read_compressed_file()
@@ -375,6 +376,8 @@ class Decompress
         {
             insert_node(root_node, i.encoding_bits,0, i.symbol);
         }
+        decode(0, root_node);
+        std::cout << decoded_string;
     }
     void insert_node(Tree_Node* node, std::string_view path, size_t index, char sym)
     {
@@ -395,14 +398,27 @@ class Decompress
         }
     }
     
-    // void decode(size_t traverse_index)
-    // {
-    //     if(traverse_index == compressed_string.size())
-    //     {
-    //         return;
-    //     }
-        
-    // }
+    void decode(size_t traverse_index, Tree_Node* node)
+    {
+        if(traverse_index == compressed_string.size())
+        {
+            return;
+        }
+        if(!node->left && !node->right)
+        {
+            decoded_string += node->symbol;
+            decode(traverse_index, root_node);
+            return;
+        }
+        if(compressed_string.at(traverse_index) == '0')
+        {
+            decode(traverse_index + 1, node->left);
+        }
+        else
+        {
+            decode(traverse_index + 1, node->right);
+        }
+    }
     
     void display()
     {
@@ -410,7 +426,7 @@ class Decompress
         {
             std::cout << "\n" << i.symbol << "==" << i.encoding_bits<<"\n";
         }
-        std::cout << compressed_string;
+        std::cout << decoded_string;
     }
 };
 int main()
