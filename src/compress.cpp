@@ -208,7 +208,7 @@ class Symbol_manager
             {
                 encoded_string += initial_list.at(static_cast<size_t>(c)).bit_encoding;
             }
-            std::cout<<"\n"<<encoded_string;
+            // std::cout<<"\n"<<encoded_string;
             save_encoded_string(encoded_string ,file_name);
         }
 
