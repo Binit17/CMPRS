@@ -6,6 +6,7 @@
 #include <cassert>
 #include <fstream>
 #include <cstdint>
+
 const int MODULO = 256;
 struct symbol_id
 {
@@ -217,9 +218,10 @@ class Symbol_manager
             int i;
             for( i=0; i<encoded_string.size(); i++)
             {
+                temp <<=1;
                 if(encoded_string[i] == '1')    temp |=1;
                 else{ temp |=0;}
-                temp <<=1;
+                
                 if((i+1) % 8 == 0 && i!=0)
                 {
                     encoding_string_to_bits += temp;    
@@ -228,7 +230,7 @@ class Symbol_manager
             if(encoded_string.size() % 8 !=0 && i!=0)
             {
                 //7- ans because for a single bit one shift would have already been done at top
-               temp <<=(7-(encoded_string.size()%8));
+               temp <<=(8-(encoded_string.size()%8));
                encoding_string_to_bits += temp;
             }
         }
@@ -260,23 +262,6 @@ class Symbol_manager
                 convert_and_store_in_bits(initial_list.at(static_cast<uint>(i)).bit_encoding, encoding_string_to_bits);
            }
 
-            // uint8_t temp=0;
-            // int i;
-            // for( i=0; i<encoded_string.size(); i++)
-            // {
-            //     if(encoded_string[i] == '1')    temp |=1;
-            //     else{ temp |=0;}
-            //     temp <<=1;
-            //     if(i % 8 == 0)
-            //     {
-            //         encoding_string_to_bits += temp;    
-            //     }
-            // }
-            // if(encoded_string.size() % 8 !=0 && i!=0)
-            // {
-            //    temp <<=(8-(encoded_string.size()%8));
-            //    encoding_string_to_bits += temp;
-            // }
             convert_and_store_in_bits(encoded_string, encoding_string_to_bits);
             std::ofstream output_file("compressss.txt");
             if(output_file.is_open())
@@ -288,26 +273,128 @@ class Symbol_manager
 
 };
 
+
+//FILE DECOMPRESS PART
+struct Tree_Node
+{
+    Tree_Node* left=nullptr;
+    Tree_Node* right=nullptr;
+    char symbol;
+};
+struct encoding_scheme
+{
+    char symbol;
+    std::string encoding_bits;
+};
 class Decompress
 {
     private:
-            std::string compressed_string;
+        std::string file_content;
+        Tree_Node* root_node;
+        size_t number_of_bits;
+        uint8_t number_of_unique_symbols;
+        std::string compressed_string;
+        std::vector<encoding_scheme> map_of_symbols;
     public:
-    void decompress()
+    Decompress(): map_of_symbols(256){}
+    void read_compressed_file()
+    {
+        // std::string file_content;
+        std::ifstream input_file{"compressss.txt"};
+        if (input_file.is_open())
         {
-            std::ifstream input_file{"compressss.txt"};
-            if(input_file.is_open()){
-                input_file.seekg(0, std::ios::end);
-                int length_of_file = input_file.tellg();
-                char *buffer = new char[length_of_file];//replace with std::string
-                input_file.seekg(0, std::ios::beg);
-                input_file.read(buffer, length_of_file);
-                compressed_string = buffer;
-                input_file.close();
-                // delete[] buffer;
+            input_file.seekg(0, std::ios::end);
+            size_t length_of_file = input_file.tellg();
+            input_file.seekg(0, std::ios::beg);
+            file_content.resize(length_of_file);
+            input_file.read(&file_content[0], length_of_file);
+            input_file.close();
+        }
+    }
+    
+    void decode_file_structure()
+    {
+        size_t traverse_index=0;
+        number_of_bits = *reinterpret_cast<size_t*>(file_content.substr(0,sizeof(size_t)).data());
+        traverse_index = sizeof(size_t);
+        number_of_unique_symbols = file_content.at(traverse_index++);
+
+        //Read symbol and their encoding
+    
+        for(int i=0;  i< static_cast<int>(number_of_unique_symbols)+1 ; i++)
+        {
+            map_of_symbols.at(i).symbol = file_content.at(traverse_index++);
+            uint8_t length_of_bits = file_content.at(traverse_index++);
+            size_t length_of_byte = ceil((float)length_of_bits/8.0);
+            std::string encoded_text = file_content.substr(traverse_index,length_of_byte);
+            traverse_index += length_of_byte;
+            convert_bits_to_bytes(encoded_text, map_of_symbols.at(i).encoding_bits, length_of_bits, length_of_byte);
+            // std::cout << length_of_byte;
+        }
+        map_of_symbols.resize(static_cast<size_t>(number_of_unique_symbols)+1);
+        
+        //read encoded stuff to byte representation for each bit and store in comprressed string
+        size_t length_of_byte = ceil((float)number_of_bits/8.0);
+        std::string encoded_text = file_content.substr(traverse_index,length_of_byte);
+        convert_bits_to_bytes(encoded_text,  compressed_string, number_of_bits, length_of_byte);
+    }
+
+
+    void convert_bits_to_bytes(std::string_view encoded_text, std::string& encoded_text_in_byte, size_t length_of_bits, size_t length_of_byte)
+    {
+        constexpr std::uint8_t mask7{ 1 << 7 }; // 1000 0000
+
+        for(size_t i = 0 ; i < length_of_byte ; i++)
+        {
+            uint8_t temp = encoded_text[i];
+            for(int j=0;  j< 8; j++)
+            {
+                if(i*8 + j == length_of_bits)
+                {
+                    break;
+                }
+                if( temp & mask7)
+                {
+                    encoded_text_in_byte += '1';
+                }
+                else
+                {
+                    encoded_text_in_byte += '0';
+                }
+                temp <<= 1;
+                
             }
         }
+    }
+    
+
+    // void create_tree()
+    // {
+    //     root_node = new Tree_Node;
+    //     for(auto i : map_of_symbols)
+    //     {
+    //         insert_node(root_node, i);
         
+    //         std::string s;
+    //         s.r
+            
+    //     }
+    // }
+    void insert_node(Tree_Node* node)
+    {
+
+    }
+    
+    
+    
+    void display()
+    {
+        for(auto i: map_of_symbols)
+        {
+            std::cout << "\n" << i.symbol << "==" << i.encoding_bits<<"\n";
+        }
+        std::cout << compressed_string;
+    }
 };
 int main()
 {
@@ -334,6 +421,11 @@ int main()
     huff.create_huffman_tree();
     huff.call_encoder();
     huff.create_compressed(test);
+
+    Decompress decom;
+    decom.read_compressed_file();
+    decom.decode_file_structure();
+    decom.display();
     return 0;
 }
 //here frequency_counter's parameter can be string from a text file 
