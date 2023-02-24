@@ -177,7 +177,7 @@ class Symbol_manager
             {
                 node->bit_encoding = encoding;
                 initial_list.at(static_cast<int>(node->sym[0])).bit_encoding = encoding;
-                std::cout << "\n"<<node->sym << "==" << node->bit_encoding;
+                // std::cout << "\n"<<node->sym << "==" << node->bit_encoding;
             }
         }
         void call_encoder()
@@ -377,7 +377,8 @@ class Decompress
             insert_node(root_node, i.encoding_bits,0, i.symbol);
         }
         decode(0, root_node);
-        std::cout << decoded_string;
+        std::cout << std::endl<<compressed_string;
+        std::cout << std::endl<<decoded_string<<std::endl;
     }
     void insert_node(Tree_Node* node, std::string_view path, size_t index, char sym)
     {
@@ -400,16 +401,17 @@ class Decompress
     
     void decode(size_t traverse_index, Tree_Node* node)
     {
-        if(traverse_index == compressed_string.size())
-        {
-            return;
-        }
         if(!node->left && !node->right)
         {
             decoded_string += node->symbol;
             decode(traverse_index, root_node);
             return;
         }
+        if(traverse_index == compressed_string.size())
+        {
+            return;
+        }
+        
         if(compressed_string.at(traverse_index) == '0')
         {
             decode(traverse_index + 1, node->left);
@@ -459,7 +461,7 @@ int main()
     decom.read_compressed_file();
     decom.decode_file_structure();
     decom.create_tree();
-    decom.display();
+    // decom.display();
     return 0;
 }
 //here frequency_counter's parameter can be string from a text file 
