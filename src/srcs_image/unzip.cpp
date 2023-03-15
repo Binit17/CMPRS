@@ -75,14 +75,56 @@ class Decompress
             // std::cout << length_of_byte;
         }
         map_of_symbols.resize(static_cast<size_t>(number_of_unique_symbols)+1);
-        
-        //read encoded stuff to byte representation for each bit and store in comprressed string
+        create_tree();
+        // read encoded stuff to byte representation for each bit and store in comprressed string
         size_t length_of_byte = ceil((float)number_of_bits/8.0);
         std::string encoded_text = file_content.substr(traverse_index,length_of_byte);
-        convert_bits_to_bytes(encoded_text,  compressed_string, number_of_bits, length_of_byte);
+        
+        // give back space taken by file_content string
+        file_content.clear();
+
+        efficient_decode(encoded_text);
+        //convert_bits_to_bytes(encoded_text,  compressed_string, number_of_bits, length_of_byte);
     }
 
+    void efficient_decode(std::string_view encoded_text)
+    {
+        size_t traverse_of_bits =0; //this is for keeping track of how many bits have been decoded
+        constexpr std::uint8_t mask7{1 << 7};
+        Tree_Node* traverse_ptr = root_node;
 
+        size_t length_of_byte = ceil((float)number_of_bits/8.0);
+        
+        for(size_t i =0; i < length_of_byte; i++)
+        {
+            uint8_t temp = encoded_text[i];
+            for(int j=0;  j< 8; j++)
+            {
+                if(i*8 + j == number_of_bits)
+                {
+                    break;
+                }
+
+                if(!traverse_ptr->left && !traverse_ptr->right)
+                {
+                    decoded_string += traverse_ptr->symbol;
+                    traverse_ptr = root_node;
+                }
+
+                if( temp & mask7)
+                {
+                    traverse_ptr= traverse_ptr->right;
+                   
+                }
+                else
+                {
+                    traverse_ptr= traverse_ptr->left;
+                    // encoded_text_in_byte += '0';
+                }
+                temp <<= 1;
+            }
+        }
+    }
     void convert_bits_to_bytes(std::string_view encoded_text, std::string& encoded_text_in_byte, size_t length_of_bits, size_t length_of_byte)
     {
         constexpr std::uint8_t mask7{ 1 << 7 }; // 1000 0000
@@ -94,7 +136,7 @@ class Decompress
             {
                 if(i*8 + j == length_of_bits)
                 {
-                    break;
+                    break;//after break i increase becomes equal to length_oof_byte and this operation ceases
                 }
                 if( temp & mask7)
                 {
@@ -118,10 +160,10 @@ class Decompress
         {
             insert_node(root_node, i.encoding_bits,0, i.symbol);
         }
-        while(traverse_in != compressed_string.size())
-        {
-            decode(traverse_in, root_node);
-        }
+        // while(traverse_in != compressed_string.size())//______CHANGE_OF_code
+        // {
+        //     decode(traverse_in, root_node);
+        // }
         // std::cout << std::endl<<compressed_string;
         // std::cout << std::endl<<decoded_string<<std::endl;
     }
@@ -151,7 +193,7 @@ class Decompress
             traverse_in = traverse_index;
             return;
         }
-        // d_size = decoded_string.size();
+        
         if(!node->left && !node->right)
         {
             decoded_string += node->symbol;
@@ -201,7 +243,7 @@ int main(int argc , char* argv[])
         return -2;
     }
     std::string file_name{argv[1]};
-    // std::string file_name{"out.bmp"};
+    // std::string file_name{"vid.webm"};
     
     Decompress decom;
 
