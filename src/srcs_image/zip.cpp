@@ -24,12 +24,35 @@ class Symbol_manager
         std::array<symbol_id, 256> initial_list;
         std::size_t list_SIZE;
         symbol_id node;
+
+        std::string file_content;
+        std::size_t length_of_bits_of_input_file;
     public:
         Symbol_manager(): list(256){list_SIZE = list.size();}
         
-        void frequency_counter(std::string_view input_string)
+
+        void read_input_file(std::string file_name)
         {
-            for(auto i: input_string)
+             std::ifstream input_file{file_name};
+             if (input_file.is_open())
+             {
+                 input_file.seekg(0, std::ios::end);
+                 size_t length_of_file = input_file.tellg();
+                 input_file.seekg(0, std::ios::beg);
+                 file_content.resize(length_of_file);
+                 input_file.read(&file_content[0], length_of_file);
+                 input_file.close();
+             }
+             else
+             {
+                 std::cout<<"FILE NOT FOUND";
+                 std::exit;
+             }
+        }
+
+        void frequency_counter()
+        {
+            for(auto i: file_content)
             {
                 uint32_t j = (static_cast<uint>(i)%MODULO);
                 if(initial_list.at(j).frequency == 0)    initial_list.at(j).sym = i;
@@ -163,6 +186,12 @@ class Symbol_manager
             list_SIZE++;
             create_huffman_tree();
         }
+
+        
+        void call_encoder()
+        {
+            assign_encoding(&list.at(0),"");
+        }
         void assign_encoding(symbol_id* node, std::string encoding)
         {
             if(node->left)
@@ -179,17 +208,17 @@ class Symbol_manager
                 initial_list.at(static_cast<uint8_t>(node->sym[0])).bit_encoding = encoding;
                 // std::cout << "\n"<<node->sym << "==" << node->bit_encoding<<std::flush;
             }
+
         }
-        void call_encoder()
-        {
-            assign_encoding(&list.at(0),"");
-        }
+        
+        
         void swap(size_t index1, size_t index2)
         {
             symbol_id temp = list.at(index1);
             list.at(index1) = list.at(index2);
             list.at(index2)= temp;
         }
+        
         void reverse_sort()
         {
             if(list_SIZE ==1)
@@ -201,15 +230,37 @@ class Symbol_manager
         }
        
        //Read file serially and change to proper encoding
-        void create_compressed(std::string_view input_text, std::string file_name)
+        void create_compressed(std::string file_name)
         {
-            std::string encoded_string{};
-            for(auto c: input_text)
+            std::string encoded_string_bits{};
+            length_of_bits_of_input_file = 0;
+            uint8_t temp=0;
+            std::string encoding_of_symbol;
+            size_t i;
+            for(auto c: file_content)
             {
-                encoded_string += initial_list.at(static_cast<uint8_t>(c)).bit_encoding;
+                encoding_of_symbol=initial_list.at(static_cast<uint8_t>(c)).bit_encoding;
+                // length_of_bits_of_input_file += encoding_of_symbol.size();
+
+                for( i=0; i<encoding_of_symbol.size(); i++)
+                {
+                    temp <<=1;
+                    if(encoding_of_symbol[i] == '1')  temp |=1;
+                    else{ temp |=0;}
+                    length_of_bits_of_input_file++;
+                    if(length_of_bits_of_input_file % 8 ==0)
+                    {
+                        encoded_string_bits += temp;    
+                    }
+                }
             }
-            // std::cout<<"\n"<<encoded_string;
-            save_encoded_string(encoded_string ,file_name);
+            if(length_of_bits_of_input_file % 8 !=0 && i!=0)
+            {
+               temp <<=(8-(length_of_bits_of_input_file%8));
+               encoded_string_bits += temp;
+            }
+            file_content.clear();
+            save_encoded_string(encoded_string_bits ,file_name);
         }
 
         void convert_and_store_in_bits(std::string_view encoded_string, std::string& encoding_string_to_bits)
@@ -219,7 +270,7 @@ class Symbol_manager
             for( i=0; i<encoded_string.size(); i++)
             {
                 temp <<=1;
-                if(encoded_string[i] == '1')    temp |=1;
+                if(encoded_string[i] == '1')  temp |=1;
                 else{ temp |=0;}
                 
                 if((i+1) % 8 == 0 && i!=0)
@@ -229,7 +280,6 @@ class Symbol_manager
             }
             if(encoded_string.size() % 8 !=0 && i!=0)
             {
-                //7- ans because for a single bit one shift would have already been done at top
                temp <<=(8-(encoded_string.size()%8));
                encoding_string_to_bits += temp;
             }
@@ -238,16 +288,17 @@ class Symbol_manager
         void save_encoded_string(std::string_view encoded_string, std::string file_name)
         {
             std::string encoding_string_to_bits{};
-            size_t length_of_bits = encoded_string.size();
+            
+            size_t length_of_bits = length_of_bits_of_input_file;
             //HEADER 1st PART total number of bits occupies 8bytes
             encoding_string_to_bits.assign(reinterpret_cast<char*>(&length_of_bits), sizeof(length_of_bits));
             // uint16_t number_of_uniquie_symbols = list.size();//is there something wrong with assignment of size_t to uint16_t?
            
-            assert(list.size() != 0 && "list size if zero");
+            assert(list.size() != 0 && "list size is zero");
            //HEADER 2nd BYTE = NUMBER OF UNQUIE SYMBOLS
            //here 1 to 256 to store it -1 is subtracted
             uint8_t number_of_uniquie_symbols = list.size()-1;
-            encoding_string_to_bits += number_of_uniquie_symbols;
+            encoding_string_to_bits += number_of_uniquie_symbols;   
             //HEADER part 3
             /*
             1ST PART SYMBOL -> 1 BYTE
@@ -262,7 +313,8 @@ class Symbol_manager
                 convert_and_store_in_bits(initial_list.at(static_cast<uint8_t>(i)).bit_encoding, encoding_string_to_bits);
            }
            
-            convert_and_store_in_bits(encoded_string, encoding_string_to_bits);
+            // convert_and_store_in_bits(encoded_string, encoding_string_to_bits);
+            encoding_string_to_bits += encoded_string;
             std::ofstream output_file(file_name, std::ios::binary);
             if(output_file.is_open())
             {
@@ -281,29 +333,17 @@ int main(int argc, char* argv[])
         return -2;
     }
     std::string file_name{argv[1]};
-    // std::string file_name{"out.bmp"};
-    std::ifstream input_file{file_name};
-    if(!input_file)
-    {
-        std::cout << "\n no file found";
-        return -1;
-    }
-    //take input from a test file
-    std::string input_text{};
-    input_file.seekg(0, std::ios::end);
-    size_t length_of_file = input_file.tellg();
-    input_file.seekg(0, std::ios::beg);
-    input_text.resize(length_of_file);
-    input_file.read(&input_text[0], length_of_file);
 
-    input_file.close();
+    // std::string file_name{"input.txt"};
+    //take input from a test file
     Symbol_manager huff;
-    huff.frequency_counter(input_text);
+    huff.read_input_file(file_name);
+    huff.frequency_counter();
     // huff.display_heaped();
     // huff.reverse_sort();
     // huff.display_heaped();
     huff.create_huffman_tree();
     huff.call_encoder();
-    huff.create_compressed(input_text, file_name);
+    huff.create_compressed(file_name);
     return 0;
-}
+    }

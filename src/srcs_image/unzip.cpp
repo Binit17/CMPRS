@@ -60,6 +60,7 @@ class Decompress
         size_t traverse_index=0;
         number_of_bits = *reinterpret_cast<size_t*>(file_content.substr(0,sizeof(size_t)).data());
         traverse_index = sizeof(size_t);
+
         number_of_unique_symbols = static_cast<uint8_t>(file_content.at(traverse_index++));
 
         //Read symbol and their encoding
@@ -89,8 +90,8 @@ class Decompress
 
     void efficient_decode(std::string_view encoded_text)
     {
-        size_t traverse_of_bits =0; //this is for keeping track of how many bits have been decoded
-        constexpr std::uint8_t mask7{1 << 7};
+        //this is for keeping track of how many bits have been decoded
+        constexpr std::uint8_t mask7{1 << 7}; //1000 0000
         Tree_Node* traverse_ptr = root_node;
 
         size_t length_of_byte = ceil((float)number_of_bits/8.0);
@@ -100,26 +101,25 @@ class Decompress
             uint8_t temp = encoded_text[i];
             for(int j=0;  j< 8; j++)
             {
-                if(i*8 + j == number_of_bits)
-                {
-                    break;
-                }
-
                 if(!traverse_ptr->left && !traverse_ptr->right)
                 {
                     decoded_string += traverse_ptr->symbol;
                     traverse_ptr = root_node;
                 }
+                if(i*8 + j == number_of_bits)
+                {
+                    break;
+                }
+
 
                 if( temp & mask7)
                 {
                     traverse_ptr= traverse_ptr->right;
-                   
                 }
                 else
                 {
                     traverse_ptr= traverse_ptr->left;
-                    // encoded_text_in_byte += '0';
+                    
                 }
                 temp <<= 1;
             }
@@ -160,12 +160,6 @@ class Decompress
         {
             insert_node(root_node, i.encoding_bits,0, i.symbol);
         }
-        // while(traverse_in != compressed_string.size())//______CHANGE_OF_code
-        // {
-        //     decode(traverse_in, root_node);
-        // }
-        // std::cout << std::endl<<compressed_string;
-        // std::cout << std::endl<<decoded_string<<std::endl;
     }
     void insert_node(Tree_Node* node, std::string_view path, size_t index, char sym)
     {
@@ -186,35 +180,6 @@ class Decompress
         }
     }
     
-    void decode(size_t traverse_index, Tree_Node* node)
-    {
-        if(traverse_index >= 100000+traverse_in && node == root_node)
-        {
-            traverse_in = traverse_index;
-            return;
-        }
-        
-        if(!node->left && !node->right)
-        {
-            decoded_string += node->symbol;
-            decode(traverse_index, root_node);
-            return;
-        }
-        if(traverse_index == compressed_string.size())
-        {
-            traverse_in = traverse_index;
-            return;
-        }
-        
-        if(compressed_string.at(traverse_index) == '0')
-        {
-            decode(traverse_index + 1, node->left);
-        }
-        else
-        {
-            decode(traverse_index + 1, node->right);
-        }
-    }
     
     void save_unzipped_file(std::string file_name)
     {
@@ -243,7 +208,7 @@ int main(int argc , char* argv[])
         return -2;
     }
     std::string file_name{argv[1]};
-    // std::string file_name{"vid.webm"};
+    // std::string file_name{"hello.txt"};
     
     Decompress decom;
 
